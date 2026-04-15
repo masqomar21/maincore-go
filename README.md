@@ -68,43 +68,42 @@ S3_SECRET_ACCESS_KEY=
 - Go 1.25+
 - PostgreSQL
 - Redis
-- [Air](https://github.com/cosmtrek/air) (Optional, for hot-reload)
 
 ### Running in Development
 
-Use `air` for automatic rebuilding:
+The easiest way to run the project is using `make`. This will automatically install `air` for hot-reloading if you don't have it:
 
 ```bash
-air
+make dev
 ```
 
-### Manual Execution
+### Manual & Target Execution
+
+You can run specific parts of the application using these simple commands:
 
 ```bash
-# Run API Server
-go run cmd/api/main.go
+# Run Database Migrations
+make migrate
 
-# Run Migrations
-go run cmd/migrate/main.go
+# Run Database Seeders
+make seed
 
-# Run Seeders
-go run cmd/seed/main.go
+# Clean up dependencies
+make tidy
 ```
 
 ## 🏗 Building for Production
 
-Build the binaries for deployment:
+Build all binaries (API, Migrate, Seed) at once:
 
 ```bash
-# API Server
-go build -o server ./cmd/api
-
-# Migration Tool
-go build -o migrate ./cmd/migrate
-
-# Seeder Tool
-go build -o seed ./cmd/seed
+make build
 ```
+
+The resulting binaries will be:
+- `./server` (API)
+- `./migrate` (Migrations)
+- `./seed` (Seeders)
 
 ## 📡 Socket.IO Support
 

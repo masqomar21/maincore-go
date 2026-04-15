@@ -32,9 +32,9 @@ tmp/
 .idea/
 
 # Binaries mentioned in instructions
-server
-migrate
-seed
+server-build
+migrate-build
+seed-build
 
 # Local scratch files
 scratch/
