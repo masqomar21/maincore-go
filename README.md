@@ -106,10 +106,10 @@ go build -o migrate ./cmd/migrate
 go build -o seed ./cmd/seed
 ```
 
-## 📡 Socket.IO Note
+## 📡 Socket.IO Support
 
-This project uses a stable implementation of Socket.IO protocol **v2**. 
-When connecting using tools like Postman or Firecamp, ensure the client version is set to **v2 (EIO=3)**.
+This project supports **Socket.IO v4** (and v3). 
+When connecting using tools like Postman, Firecamp, or modern web clients, you can use the default settings (**v4 / EIO=4**).
 
 ## 📜 License
 

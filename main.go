@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"maincore_go/config"
+	"maincore_go/middlewares"
 	"maincore_go/routes"
 	"maincore_go/services"
 
@@ -39,14 +40,17 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 	r := gin.Default()
+	r.Use(middlewares.CorsMiddleware())
 
 	// Setup Socket.IO Server
 	socketServer := services.InitSocketServer()
-	defer socketServer.Close()
+	defer socketServer.Close(nil)
 
 	// Handle socket.io route specifically
-	r.GET("/socket.io/*any", gin.WrapH(socketServer))
-	r.POST("/socket.io/*any", gin.WrapH(socketServer))
+	// zishang520/socket.io uses ServeHandler to return a http.Handler
+	socketHandler := socketServer.ServeHandler(nil)
+	r.GET("/socket.io/*any", gin.WrapH(socketHandler))
+	r.POST("/socket.io/*any", gin.WrapH(socketHandler))
 
 	// Health check route
 	r.GET("/", func(c *gin.Context) {

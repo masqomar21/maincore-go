@@ -3,38 +3,43 @@ package services
 import (
 	"log"
 
-	socketio "github.com/googollee/go-socket.io"
+	"github.com/zishang520/engine.io/v2/config"
+	"github.com/zishang520/engine.io/v2/types"
+	"github.com/zishang520/socket.io/v2/socket"
 )
 
-var SocketServer *socketio.Server
+var SocketServer *socket.Server
 
-func InitSocketServer() *socketio.Server {
-	server := socketio.NewServer(nil)
-
-	server.OnConnect("/", func(s socketio.Conn) error {
-		s.SetContext("")
-		log.Println("connected:", s.ID())
-		return nil
+func InitSocketServer() *socket.Server {
+	opts := socket.DefaultServerOptions()
+	
+	// Configure CORS for engine.io
+	eo := config.DefaultServerOptions()
+	eo.SetCors(&types.Cors{
+		Origin:      "*",
+		Credentials: true,
 	})
+	// Allow v3/v4 clients (EIO=3, EIO=4)
+	eo.SetAllowEIO3(true)
+	
+	opts.ServerOptions = *eo
 
-	server.OnEvent("/", "join", func(s socketio.Conn, msg string) {
-		s.Join("test_room")
-		s.Emit("reply", "joined test_room")
+	server := socket.NewServer(nil, opts)
+
+	server.On("connection", func(clients ...any) {
+		client := clients[0].(*socket.Socket)
+		log.Println("connected:", client.Id())
+
+		client.On("join", func(datas ...any) {
+			log.Println("join", datas)
+			client.Join("test_room")
+			client.Emit("reply", "joined test_room")
+		})
+
+		client.On("disconnect", func(reasons ...any) {
+			log.Println("disconnected:", client.Id(), reasons)
+		})
 	})
-
-	server.OnError("/", func(s socketio.Conn, e error) {
-		log.Println("meet error:", e)
-	})
-
-	server.OnDisconnect("/", func(s socketio.Conn, reason string) {
-		log.Println("closed", reason)
-	})
-
-	go func() {
-		if err := server.Serve(); err != nil {
-			log.Printf("socketio listen error: %s\n", err)
-		}
-	}()
 
 	SocketServer = server
 	return server
