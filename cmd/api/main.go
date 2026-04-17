@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"net"
@@ -14,6 +15,7 @@ import (
 
 	"maincore_go/config"
 	"maincore_go/middlewares"
+	"maincore_go/models"
 	"maincore_go/routes"
 	"maincore_go/services"
 
@@ -21,6 +23,8 @@ import (
 )
 
 func main() {
+	autoMigrate := flag.Bool("auto-migrate", false, "Auto migrate database")
+	flag.Parse()	
 	// Initialize Configuration
 	config.InitConfig()
 
@@ -31,6 +35,11 @@ func main() {
 	// Initialize S3 & Queue
 	services.InitS3()
 	services.InitQueue()
+
+	if *autoMigrate {
+		models.AutoMigrate(config.DB)
+		return
+	}
 
 	// Start Background Worker
 	go services.StartWorker()
