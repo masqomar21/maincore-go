@@ -63,13 +63,147 @@ func AutoMigrate(db *gorm.DB) {
 - **Tidak** menghapus kolom yang sudah ada (non-destructive)
 - **Tidak** mengubah tipe kolom yang sudah ada
 
-> ⚠️ **Perhatian**: GORM AutoMigrate tidak menghapus kolom. Jika ada kolom yang perlu dihapus, harus dilakukan secara manual di database.
+> ⚠️ Untuk operasi seperti **hapus kolom, rename kolom, atau ubah tipe kolom**, gunakan sistem **Manual Migration** yang sudah tersedia — lihat section di bawah.
 
 ### Menambah Model Baru ke AutoMigrate
 
 1. Buat struct model baru di `models/models.go`
 2. Tambahkan pointer struct tersebut ke dalam list `db.AutoMigrate(...)` di `models/autoMigrate.go`
 3. Jalankan `make migrate`
+
+---
+
+## 📄 `models/migrations.go` — Manual Migration System
+
+File ini menyediakan sistem **versioned manual migration** untuk operasi schema yang tidak bisa dilakukan AutoMigrate secara otomatis, seperti menghapus kolom, rename kolom, atau mengubah tipe kolom — **semuanya via kode Go, tanpa perlu akses database secara manual**.
+
+### Cara Kerja
+
+Setiap migration step didaftarkan dalam slice `ManualMigrations`. Saat `make migrate` dijalankan, sistem akan:
+
+1. Membaca semua step dalam `ManualMigrations`
+2. Mengecek tabel `migration_logs` di database — apakah step tersebut sudah pernah dijalankan
+3. Jika **belum** → jalankan fungsi `Up()` dalam transaksi database
+4. Jika **berhasil** → catat nama step ke `migration_logs` agar tidak dijalankan lagi
+5. Jika **gagal** → transaksi di-rollback, program berhenti dengan pesan error
+
+```
+make migrate
+    │
+    ├─► AutoMigrate()          → Sinkronisasi struct model ke tabel
+    │
+    └─► RunManualMigrations()
+            │
+            ├─► Buat tabel migration_logs jika belum ada
+            │
+            └─► Untuk setiap step di ManualMigrations:
+                    ├─► Cek migration_logs: sudah dijalankan? → SKIP
+                    └─► Belum? → Jalankan Up() dalam transaksi → Catat ke migration_logs
+```
+
+### Struct yang Terlibat
+
+```go
+// MigrationLog — tabel internal pencatat history migration
+type MigrationLog struct {
+    ID        uint      `gorm:"primaryKey"`
+    Name      string    `gorm:"uniqueIndex;not null"` // Nama unik step
+    CreatedAt time.Time
+}
+
+// MigrationStep — definisi satu langkah migration manual
+type MigrationStep struct {
+    Name string                    // Identifier unik, format: "YYYY-MM-DD_deskripsi"
+    Up   func(db *gorm.DB) error   // Fungsi yang dijalankan
+}
+```
+
+### Cara Menambah Migration Manual Baru
+
+Buka `models/migrations.go` dan tambahkan entry baru di bagian **"TAMBAHKAN MIGRATION BARU DI BAWAH SINI"**:
+
+```go
+var ManualMigrations = []MigrationStep{
+    // Entry lama JANGAN dihapus atau diubah!
+
+    // ✅ Tambahkan di sini:
+    {
+        Name: "2026-06-10_nama_deskripsi_singkat",
+        Up: func(db *gorm.DB) error {
+            // Tulis operasi migration di sini
+            return nil
+        },
+    },
+}
+```
+
+> ⚠️ **PENTING**: Jangan pernah mengubah atau menghapus entry yang sudah ada. Nama (`Name`) harus unik dan tidak boleh berubah karena digunakan sebagai identifier di database.
+
+### Referensi Operasi `db.Migrator()`
+
+| Operasi | Kode |
+|---------|------|
+| Hapus kolom | `db.Migrator().DropColumn(&Model{}, "nama_kolom")` |
+| Rename kolom | `db.Migrator().RenameColumn(&Model{}, "lama", "baru")` |
+| Ubah tipe/constraint kolom | `db.Migrator().AlterColumn(&Model{}, "nama_kolom")` |
+| Cek kolom ada | `db.Migrator().HasColumn(&Model{}, "nama_kolom")` |
+| Hapus tabel | `db.Migrator().DropTable(&Model{})` |
+| Rename tabel | `db.Migrator().RenameTable("lama", "baru")` |
+| Buat index | `db.Migrator().CreateIndex(&Model{}, "IndexName")` |
+| Hapus index | `db.Migrator().DropIndex(&Model{}, "IndexName")` |
+| Raw SQL | `db.Exec("ALTER TABLE ...")` |
+
+### Contoh-Contoh Nyata
+
+#### Hapus Kolom yang Tidak Dipakai Lagi
+
+```go
+{
+    Name: "2026-06-10_drop_users_old_field",
+    Up: func(db *gorm.DB) error {
+        if db.Migrator().HasColumn(&User{}, "old_field") {
+            return db.Migrator().DropColumn(&User{}, "old_field")
+        }
+        return nil // aman jika kolom sudah tidak ada
+    },
+},
+```
+
+#### Rename Kolom
+
+```go
+{
+    Name: "2026-06-10_rename_users_phone_to_phone_number",
+    Up: func(db *gorm.DB) error {
+        if db.Migrator().HasColumn(&User{}, "phone") {
+            return db.Migrator().RenameColumn(&User{}, "phone", "phone_number")
+        }
+        return nil
+    },
+},
+```
+
+#### Ubah Tipe Kolom (via Raw SQL)
+
+```go
+{
+    Name: "2026-06-10_alter_loggers_detail_to_text",
+    Up: func(db *gorm.DB) error {
+        return db.Exec("ALTER TABLE loggers ALTER COLUMN detail TYPE TEXT").Error
+    },
+},
+```
+
+#### Hapus Tabel yang Sudah Tidak Digunakan
+
+```go
+{
+    Name: "2026-06-10_drop_old_tokens_table",
+    Up: func(db *gorm.DB) error {
+        return db.Migrator().DropTable("old_tokens")
+    },
+},
+```
 
 ---
 

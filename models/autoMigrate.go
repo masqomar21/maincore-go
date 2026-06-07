@@ -19,6 +19,7 @@ func AutoMigrate(db *gorm.DB) {
 		&Notification{},
 		&NotificationUser{},
 		&WebPushSubscription{},
+		&MigrationLog{}, // Tabel internal untuk mencatat manual migrations
 	)
 	if err != nil {
 		log.Fatal("Failed to auto migrate database:", err)
