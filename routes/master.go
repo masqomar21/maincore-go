@@ -8,6 +8,9 @@ import (
 )
 
 func MasterRoutes(router *gin.RouterGroup) {
+	// Public Routes
+	router.GET("/test-pdf", controllers.TestDownloadPDF)
+
 	// Protected by Auth & Permissions
 	master := router.Group("/")
 	master.Use(middlewares.AuthMiddleware())

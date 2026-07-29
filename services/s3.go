@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"mime/multipart"
+	"time"
 
 	"maincore_go/config"
 
@@ -68,3 +69,23 @@ func DeleteFileFromS3(ctx context.Context, key string) error {
 	})
 	return err
 }
+
+func GeneratePresignedUploadURL(ctx context.Context, key string, lifetime time.Duration) (string, error) {
+	if lifetime <= 0 {
+		lifetime = 15 * time.Minute
+	}
+
+	presignClient := s3.NewPresignClient(S3Client)
+	req, err := presignClient.PresignPutObject(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(config.AppConfig.S3Bucket),
+		Key:    aws.String(key),
+	}, func(opts *s3.PresignOptions) {
+		opts.Expires = lifetime
+	})
+	if err != nil {
+		return "", err
+	}
+
+	return req.URL, nil
+}
+

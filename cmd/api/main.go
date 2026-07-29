@@ -78,6 +78,7 @@ func main() {
 	routes.AuthRoutes(api)
 	routes.ResetPasswordRoutes(api)
 	routes.MasterRoutes(api)
+	routes.S3Routes(api)
 
 	// Find available port
 	originalPort := config.AppConfig.Port
