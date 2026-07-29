@@ -3,28 +3,13 @@ package models
 import (
 	"log"
 
-	"gorm.io/gorm"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
-func AutoMigrate(db *gorm.DB) {
-	err := db.AutoMigrate(
-		&Permission{},
-		&Role{},
-		&RolePermission{},
-		&User{},
-		&Otp{},
-		&Session{},
-		&Logger{},
-		&Notification{},
-		&NotificationUser{},
-		&WebPushSubscription{},
-	)
-	if err != nil {
-		log.Fatal("Failed to auto migrate database:", err)
-	}
-	log.Println("Database auto-migration completed successfully.")
-}
+
+
+
 
 func Seed(db *gorm.DB) {
 	log.Println("Running seeders...")
